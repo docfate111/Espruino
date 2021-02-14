@@ -546,9 +546,9 @@ int main(int argc, char **argv) {
               _exit(-1);
             }
             // allocate size+1 bytes
-            char *script_src = (char *)malloc(script_size+1);
+            char *buffer = (char *)malloc(script_size+1);
             // read size bytes from REPRL_DRFD into allocated buffer
-            char *ptr = script_src;
+            char *ptr = buffer;
             size_t remaining = script_size;
             while (remaining > 0) {
               ssize_t rv = read(REPRL_DRFD, ptr, remaining);
@@ -559,16 +559,38 @@ int main(int argc, char **argv) {
               remaining -= rv;
               ptr += rv;
             }
-            script_src[script_size] = '\0';
+            buffer[script_size] = '\0';
             // Execute buffer as javascript code
-            
-
-/*   
-        Store return value from JS execution
-        Flush stdout and stderr. As REPRL sets them to regular files, libc uses full bufferring for them, which means they need to be flushed after every execution
-        Mask return value with 0xff and shift it left by 8, then write that value over REPRL_CWFD
-        Reset the Javascript engine
-        Call __sanitizer_cov_reset_edgeguards to reset coverage */
+            char *cmd = buffer;
+            if (cmd[0] == '#') {
+              while (cmd[0] && cmd[0] != '\n')
+                cmd++;
+              if (cmd[0] == '\n')
+                cmd++;
+            }
+            jshInit();
+            jsvInit(0);
+            jsiInit(false /* do not autoload!!! */);
+            addNativeFunction("quit", nativeQuit);
+            // addNativeFunction("fuzzilli", fuzzilli);
+            jsvUnLock(jspEvaluate(cmd, false));
+            //  Store return value from JS execution
+            int result = handleErrors();
+            free(buffer);
+            // Reset the Javascript engine
+            jsiKill();
+            jsvKill();
+            jshKill();
+            //  Flush stdout and stderr
+            fflush(stdout);
+            fflush(stderr);
+            //  Mask return value with 0xff and shift it left by 8
+            int status = (result & 0xff) << 8;
+            // then write that value over REPRL_CWFD
+            CHECK(write(REPRL_CWFD, &status, 4) == 4);
+            // Call __sanitizer_cov_reset_edgeguards to reset coverage 
+            __sanitizer_cov_reset_edgeguards();
+          }
       } else {
         warning("Unknown Argument %s", a);
         show_help();
@@ -644,7 +666,6 @@ int main(int argc, char **argv) {
 
   addNativeFunction("quit", nativeQuit);
   addNativeFunction("interrupt", nativeInterrupt);
-
   while (isRunning) {
     jsiLoop();
   }
