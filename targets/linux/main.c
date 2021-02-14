@@ -306,6 +306,87 @@ void sig_handler(int sig) {
     jspSetInterrupted(true);
 }
 
+//
+// BEGIN FUZZING CODE
+//
+
+#define REPRL_CRFD 100
+#define REPRL_CWFD 101
+#define REPRL_DRFD 102
+#define REPRL_DWFD 103
+
+#define SHM_SIZE 0x100000
+#define MAX_EDGES ((SHM_SIZE - 4) * 8)
+
+#define CHECK(cond) if (!(cond)) { fprintf(stderr, "\"" #cond "\" failed\n"); _exit(-1); }
+
+struct shmem_data {
+    uint32_t num_edges;
+    unsigned char edges[];
+};
+
+struct shmem_data* __shmem;
+uint32_t *__edges_start, *__edges_stop;
+
+void __sanitizer_cov_reset_edgeguards() {
+    uint64_t N = 0;
+    for (uint32_t *x = __edges_start; x < __edges_stop && N < MAX_EDGES; x++)
+        *x = ++N;
+}
+
+extern "C" void __sanitizer_cov_trace_pc_guard_init(uint32_t *start, uint32_t *stop) {
+    // Avoid duplicate initialization
+    if (start == stop || *start)
+        return;
+
+    if (__edges_start != NULL || __edges_stop != NULL) {
+        fprintf(stderr, "Coverage instrumentation is only supported for a single module\n");
+        _exit(-1);
+    }
+
+    __edges_start = start;
+    __edges_stop = stop;
+
+    // Map the shared memory region
+    const char* shm_key = getenv("SHM_ID");
+    if (!shm_key) {
+        puts("[COV] no shared memory bitmap available, skipping");
+        __shmem = (struct shmem_data*) malloc(SHM_SIZE);
+    } else {
+        int fd = shm_open(shm_key, O_RDWR, S_IREAD | S_IWRITE);
+        if (fd <= -1) {
+            fprintf(stderr, "Failed to open shared memory region: %s\n", strerror(errno));
+            _exit(-1);
+        }
+
+        __shmem = (struct shmem_data*) mmap(0, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        if (__shmem == MAP_FAILED) {
+            fprintf(stderr, "Failed to mmap shared memory region\n");
+            _exit(-1);
+        }
+    }
+
+    __sanitizer_cov_reset_edgeguards();
+
+    __shmem->num_edges = stop - start;
+    printf("[COV] edge counters initialized. Shared memory: %s with %u edges\n", shm_key, __shmem->num_edges);
+}
+
+extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
+    // There's a small race condition here: if this function executes in two threads for the same
+    // edge at the same time, the first thread might disable the edge (by setting the guard to zero)
+    // before the second thread fetches the guard value (and thus the index). However, our
+    // instrumentation ignores the first edge (see libcoverage.c) and so the race is unproblematic.
+    uint32_t index = *guard;
+    // If this function is called before coverage instrumentation is properly initialized we want to return early.
+    if (!index) return;
+    __shmem->edges[index / 8] |= 1 << (index % 8);
+    *guard = 0;
+}
+
+//
+// END FUZZING CODE
+//
 void show_help() {
   warning("Usage:");
   warning("   ./espruino                           : JavaScript immediate mode "
@@ -317,6 +398,7 @@ void show_help() {
   warning("   -h, --help              Print this help screen");
   warning("   -e, --eval script       Evaluate the JavaScript supplied on the "
           "command-line");
+  warning("  --fuzzilli               Mode for Fuzzilli javascript engine fuzzer")
 #ifdef USE_TELNET
   warning(
       "   --telnet                Enable internal telnet server on port 2323");
@@ -427,6 +509,35 @@ int main(int argc, char **argv) {
           die("Expecting an extra 2 arguments\n");
         bool ok = run_memory_test(argv[i + 1], atoi(argv[i + 2]));
         exit(ok ? 0 : 1);
+
+      } else if (!strcmp(a, "--fuzzilli")) {
+        /*
+        if REPRL_MODE on commandline:
+        */
+          char helo[] = "HELO";
+          //  write "HELO" on REPRL_CWFD and read 4 bytes on REPRL_CRFD
+            if (write(REPRL_CWFD, helo, 4) != 4 || read(REPRL_CRFD, helo, 4) != 4) {
+              printf("Invalid HELO response from parent\n");
+            }
+            //    break if 4 read bytes do not equal "HELO"
+            //  optionally, mmap the REPRL_DRFD with size REPRL_MAX_DATA_SIZE
+            if (memcmp(helo, "HELO", 4) != 0) {
+              printf("Invalid response from parent\n");
+              _exit(-1);
+            }
+/*   
+    while true:
+        read 4 bytes on REPRL_CRFD
+        break if 4 read bytes do not equal "cexe"
+        read 8 bytes on REPRL_CRFD, store as unsigned 64 bit integer size
+        allocate size+1 bytes
+        read size bytes from REPRL_DRFD into allocated buffer, either via memory mapped IO or the read syscall (make sure to account for short reads in the latter case)
+        Execute buffer as javascript code
+        Store return value from JS execution
+        Flush stdout and stderr. As REPRL sets them to regular files, libc uses full bufferring for them, which means they need to be flushed after every execution
+        Mask return value with 0xff and shift it left by 8, then write that value over REPRL_CWFD
+        Reset the Javascript engine
+        Call __sanitizer_cov_reset_edgeguards to reset coverage */
       } else {
         warning("Unknown Argument %s", a);
         show_help();
