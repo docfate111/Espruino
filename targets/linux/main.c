@@ -18,7 +18,7 @@
 
 #define TEST_DIR "tests/"
 #define CMD_NAME "espruino"
-
+#define REPRL_MAX_DATA_SIZE (16*1024*1024)
 bool isRunning = true;
 struct filelist test_files;
 
@@ -516,23 +516,54 @@ int main(int argc, char **argv) {
         */
           char helo[] = "HELO";
           //  write "HELO" on REPRL_CWFD and read 4 bytes on REPRL_CRFD
-            if (write(REPRL_CWFD, helo, 4) != 4 || read(REPRL_CRFD, helo, 4) != 4) {
+          if (write(REPRL_CWFD, helo, 4) != 4 || read(REPRL_CRFD, helo, 4) != 4) {
               printf("Invalid HELO response from parent\n");
-            }
-            //    break if 4 read bytes do not equal "HELO"
-            //  optionally, mmap the REPRL_DRFD with size REPRL_MAX_DATA_SIZE
-            if (memcmp(helo, "HELO", 4) != 0) {
+          }
+          //    break if 4 read bytes do not equal "HELO"
+          if (memcmp(helo, "HELO", 4) != 0) {
               printf("Invalid response from parent\n");
               _exit(-1);
+          }
+          //  optionally, mmap the REPRL_DRFD with size REPRL_MAX_DATA_SIZE
+          //  char* reprl_input_data = (char*)mmap(0, REPRL_MAX_DATA_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, REPRL_DRFD, 0);
+          //  while true:
+          while(1){
+            // read 4 bytes on REPRL_CRFD
+            unsigned action;
+            if(read(REPRL_CRFD, &action, 4) != 4){
+              fprintf(stderr, "Did not get 4 bytes");
+              _exit(-1);
             }
+            // break if 4 read bytes do not equal "cexe"
+            if (action != 'cexe') {
+             fprintf(stderr, "[REPRL] Unknown action: %u\n", action);
+             _exit(-1);
+            }
+            size_t script_size = 0;
+            // read 8 bytes on REPRL_CRFD, store as unsigned 64 bit integer size
+            if(read(REPRL_CRFD, &script_size, 8) != 8){
+              fprintf(stderr, "Failed to read size of buffer");
+              _exit(-1);
+            }
+            // allocate size+1 bytes
+            char *script_src = (char *)malloc(script_size+1);
+            // read size bytes from REPRL_DRFD into allocated buffer
+            char *ptr = script_src;
+            size_t remaining = script_size;
+            while (remaining > 0) {
+              ssize_t rv = read(REPRL_DRFD, ptr, remaining);
+              if (rv <= 0) {
+                fprintf(stderr, "Failed to load script\n");
+                _exit(-1);
+              }
+              remaining -= rv;
+              ptr += rv;
+            }
+            script_src[script_size] = '\0';
+            // Execute buffer as javascript code
+            
+
 /*   
-    while true:
-        read 4 bytes on REPRL_CRFD
-        break if 4 read bytes do not equal "cexe"
-        read 8 bytes on REPRL_CRFD, store as unsigned 64 bit integer size
-        allocate size+1 bytes
-        read size bytes from REPRL_DRFD into allocated buffer, either via memory mapped IO or the read syscall (make sure to account for short reads in the latter case)
-        Execute buffer as javascript code
         Store return value from JS execution
         Flush stdout and stderr. As REPRL sets them to regular files, libc uses full bufferring for them, which means they need to be flushed after every execution
         Mask return value with 0xff and shift it left by 8, then write that value over REPRL_CWFD
