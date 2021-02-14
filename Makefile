@@ -67,15 +67,15 @@ GENDIR=gen
 endif
 
 ifndef SINGLETHREAD
-MAKEFLAGS=-j5 # multicore
+MAKEFLAGS=-j5 -lrt # multicore
 endif
 
 INCLUDE?=-I$(ROOT) -I$(ROOT)/targets -I$(ROOT)/src -I$(GENDIR)
 LIBS?=
 DEFINES?=
-CFLAGS?=-Wall -Wextra -Wconversion -Werror=implicit-function-declaration -fno-strict-aliasing -g
-CCFLAGS?= # specific flags when compiling cc files
-LDFLAGS?=-Winline -g
+CFLAGS?=-Wall -lrt -Wextra -Wconversion -Werror=implicit-function-declaration -fno-strict-aliasing -g
+CCFLAGS?=-lrt # specific flags when compiling cc files
+LDFLAGS?=-Winline -g -lrt
 OPTIMIZEFLAGS?=
 #-fdiagnostics-show-option - shows which flags can be used with -Werror
 DEFINES+=-DGIT_COMMIT=$(shell git log -1 --format="%h")
@@ -367,7 +367,7 @@ WRAPPERSOURCES += libs/math/jswrap_math.c
 ifeq ($(FAMILY),ESP8266)
 # special ESP8266 maths lib that doesn't go into RAM
 LIBS += -lmirom
-LDFLAGS += -L$(ROOT)/targets/esp8266
+LDFLAGS += -L$(ROOT)/targets/esp8266 -lrt
 else
 # everything else uses normal maths lib
 LIBS += -lm
@@ -680,12 +680,12 @@ CFLAGS += $(OPTIMIZEFLAGS) -c $(ARCHFLAGS) $(DEFINES) $(INCLUDE)
 # -Wl,--whole-archive checks for duplicates
 # --specs=nano.specs uses newlib-nano
 ifdef NRF5X
- LDFLAGS += $(OPTIMIZEFLAGS) $(ARCHFLAGS) --specs=nano.specs -lc -lnosys
+ LDFLAGS += $(OPTIMIZEFLAGS) $(ARCHFLAGS) --specs=nano.specs -lc -lnosys -lrt
 else ifdef STM32
- LDFLAGS += $(OPTIMIZEFLAGS) $(ARCHFLAGS) --specs=nano.specs -lc -lnosys
+ LDFLAGS += $(OPTIMIZEFLAGS) $(ARCHFLAGS) --specs=nano.specs -lc -lnosys -lrt
 else ifdef EFM32
  LDFLAGS += $(OPTIMIZEFLAGS) $(ARCHFLAGS)
- LDFLAGS += -Wl,--start-group -lgcc -lc -lnosys -Wl,--end-group
+ LDFLAGS += -Wl,--start-group -lgcc -lc -lnosys -Wl,--end-group -lrt
 else
  LDFLAGS += $(OPTIMIZEFLAGS) $(ARCHFLAGS)
 endif

@@ -8,8 +8,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/mman.h>
-#include <sys/stat.h>        /* For mode constants */
-#include <fcntl.h>           /* For O_* constants */
+#include <sys/stat.h>      
+#include <fcntl.h>
 
 #include "jslex.h"
 #include "jsparse.h"
