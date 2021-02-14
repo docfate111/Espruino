@@ -76,7 +76,7 @@ DEFINES?=
 CFLAGS?=-Wall -lrt -Wextra -Wconversion -Werror=implicit-function-declaration -fno-strict-aliasing -g
 CCFLAGS?=-lrt # specific flags when compiling cc files
 LDFLAGS?=-Winline -g -lrt
-OPTIMIZEFLAGS?=
+OPTIMIZEFLAGS?=-lrt
 #-fdiagnostics-show-option - shows which flags can be used with -Werror
 DEFINES+=-DGIT_COMMIT=$(shell git log -1 --format="%h")
 
@@ -684,7 +684,7 @@ ifdef NRF5X
 else ifdef STM32
  LDFLAGS += $(OPTIMIZEFLAGS) $(ARCHFLAGS) --specs=nano.specs -lc -lnosys -lrt
 else ifdef EFM32
- LDFLAGS += $(OPTIMIZEFLAGS) $(ARCHFLAGS)
+ LDFLAGS +=  -lrt $(OPTIMIZEFLAGS) $(ARCHFLAGS)
  LDFLAGS += -Wl,--start-group -lgcc -lc -lnosys -Wl,--end-group -lrt
 else
  LDFLAGS += $(OPTIMIZEFLAGS) $(ARCHFLAGS)
@@ -692,11 +692,11 @@ endif
 
 ifdef EMBEDDED
 DEFINES += -DEMBEDDED
-LDFLAGS += -Wl,--gc-sections
+LDFLAGS +=  -lrt -Wl,--gc-sections
 endif
 
 ifdef LINKER_FILE
-  LDFLAGS += -T$(LINKER_FILE)
+  LDFLAGS +=  -lrt -T$(LINKER_FILE)
 endif
 
 # Adds additional files from unsupported sources(means not supported by Gordon) to actual make
