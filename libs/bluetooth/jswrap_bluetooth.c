@@ -1909,7 +1909,7 @@ void jswrap_ble_findDevices(JsVar *callback, JsVar *options) {
   jsvObjectSetChildAndUnLock(execInfo.hiddenRoot, "BLEADV", jsvNewEmptyArray());
   jsvObjectSetChild(execInfo.hiddenRoot, "BLEADVCB", callback);
   JsVar *fn;
-  fn = jsvNewNativeFunction((void (*)(void))jswrap_ble_findDevices_found_cb, JSWAT_VOID|(JSWAT_JSVAR<<JSWAT_BITS));
+  fn = ((void (*)(void))jswrap_ble_findDevices_found_cb, JSWAT_VOID|(JSWAT_JSVAR<<JSWAT_BITS));
   if (fn) {
     jswrap_ble_setScan(fn, options);
     jsvUnLock(fn);

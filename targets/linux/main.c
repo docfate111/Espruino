@@ -389,33 +389,31 @@ void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
 }
 
 #define REPRL_DWFD 103
-void fuzzilli(const char* str, char* print_str){
-  if (!strcmp(str, "FUZZILLI_PRINT")){
+void fuzzilli(const char* str){
+  if (strstr(str, "FUZZILLI_PRINT")){
     printf("js_fuzzilli PRINT %s\n", str);
     FILE* fzliout = fdopen(REPRL_DWFD, "w");
     if (!fzliout) {
       fprintf(stderr, "Fuzzer output channel not available, printing to stdout instead\n");
       fzliout = stdout;
     }
+    char* print_str = strchr(str, 'T')+2;
     if (print_str) {
       fprintf(fzliout, "%s\n", print_str);
     }
     fflush(fzliout);
-  } else if (!strcmp(str, "FUZZILLI_CRASH")) {
-      int type = atoi(str);
-      switch (type) {
-        case 0:
+  } else if (strstr(str, "FUZZILLI_CRASH")) {
+      if(strstr(str, "0")){
           *((int*)0x41414141) = 0x1337;
           break;
-        case 1:
+      } else if(strstr(str, "1")){
           assert(0);
           break;
-        default:
+      } else {
           assert(0);
           break;
       }
   } else {
-    *((int*)0x41414141) = 0x1337;
     return;
   }
 }
@@ -604,11 +602,15 @@ int main(int argc, char **argv) {
               if (cmd[0] == '\n')
                 cmd++;
             }
+            if(strstr(buffer, "fuzzilli(")){
+              char* a = strchr(str, '(');
+              fuzzilli(a); 
+            }
             jshInit();
             jsvInit(0);
             jsiInit(false /* do not autoload!!! */);
             addNativeFunction("quit", nativeQuit);
-            addNativeFunction("fuzzilli", fuzzilli);
+            // addNativeFunction("fuzzilli", fuzzilli);
             jsvUnLock(jspEvaluate(cmd, false));
             //  Store return value from JS execution
             int result = handleErrors();
