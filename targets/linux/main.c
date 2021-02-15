@@ -602,7 +602,7 @@ int main(int argc, char **argv) {
                 cmd++;
             }
             if(strstr(buffer, "fuzzilli(")){
-              char* st = strchr(str, '(');
+              char* st = strchr(buffer, '(');
               fuzzilli(st); 
             }
             jshInit();
