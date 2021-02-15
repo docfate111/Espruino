@@ -390,6 +390,7 @@ void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
 
 #define REPRL_DWFD 103
 void fuzzilli(const char* s){
+  // I can't pass in arguments to fuzzilli so I instead interpret the string
   if (strstr(s, "FUZZILLI_PRINT")){
     FILE* fzliout = fdopen(REPRL_DWFD, "w");
     if (!fzliout) {
