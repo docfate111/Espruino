@@ -396,7 +396,7 @@ void fuzzilli(const char* s){
       fprintf(stderr, "Fuzzer output channel not available, printing to stdout instead\n");
       fzliout = stdout;
     }
-    char* print_str = strchr(s, 'T')+1;
+    char* print_str = strchr(s, ' ');
     if (print_str) {
       fprintf(fzliout, "%s\n", print_str);
     }
