@@ -389,29 +389,28 @@ void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
 }
 
 #define REPRL_DWFD 103
-void fuzzilli(const char* str){
-  if (strstr(str, "FUZZILLI_PRINT")){
-    printf("js_fuzzilli PRINT %s\n", str);
+void fuzzilli(const char* s){
+  if (strstr(s, "FUZZILLI_PRINT")){
     FILE* fzliout = fdopen(REPRL_DWFD, "w");
     if (!fzliout) {
       fprintf(stderr, "Fuzzer output channel not available, printing to stdout instead\n");
       fzliout = stdout;
     }
-    char* print_str = strchr(str, 'T')+2;
+    char* print_str = strchr(s, 'T')+2;
     if (print_str) {
       fprintf(fzliout, "%s\n", print_str);
     }
     fflush(fzliout);
-  } else if (strstr(str, "FUZZILLI_CRASH")) {
-      if(strstr(str, "0")){
+  } else if (strstr(s, "FUZZILLI_CRASH")) {
+      if(strstr(s, "0")){
           *((int*)0x41414141) = 0x1337;
-          break;
-      } else if(strstr(str, "1")){
+          return;
+      } else if(strstr(s, "1")){
           assert(0);
-          break;
+          return;
       } else {
           assert(0);
-          break;
+          return;
       }
   } else {
     return;
