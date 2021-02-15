@@ -67,11 +67,11 @@ GENDIR=gen
 endif
 
 ifndef SINGLETHREAD
-MAKEFLAGS=-j5 -lrt # multicore
+MAKEFLAGS=-lrt -j5 # multicore
 endif
 
 INCLUDE?=-I$(ROOT) -I$(ROOT)/targets -I$(ROOT)/src -I$(GENDIR)
-LIBS?=
+LIBS?=-lrt
 DEFINES?=
 CFLAGS?=-Wall -lrt -Wextra -Wconversion -Werror=implicit-function-declaration -fno-strict-aliasing -g
 CCFLAGS?=-lrt # specific flags when compiling cc files
@@ -82,7 +82,7 @@ DEFINES+=-DGIT_COMMIT=$(shell git log -1 --format="%h")
 
 ifeq ($(shell uname),Darwin)
 MACOSX=1
-CFLAGS+=-D__MACOSX__
+CFLAGS+=-lrt -D__MACOSX__
 STAT_FLAGS='-f ''%z'''
 else
 STAT_FLAGS='-c ''%s'''

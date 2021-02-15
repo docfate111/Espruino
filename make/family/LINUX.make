@@ -26,9 +26,9 @@ ifeq ($(BOARD),RASPBERRYPI)
 endif
 
 ifdef MACOSX
-  CCFLAGS += -DTF_LITE_DISABLE_X86_NEON
+  CCFLAGS += -DTF_LITE_DISABLE_X86_NEON -lrt
 else
-  CFLAGS += -std=gnu99
+  CCFLAGS += -std=gnu99 -lrt
 endif
 DEFINES += -DLINUX
 INCLUDE += -I$(ROOT)/targets/linux
@@ -37,7 +37,7 @@ targets/linux/main.c                    \
 targets/linux/jshardware.c
 LIBS += -lpthread # thread lib for input processing
 ifdef OPENWRT_UCLIBC
-LIBS += -lc
+LIBS += -lc -lrt
 else
-LIBS += -lstdc++
+LIBS += -lstdc++ -lrt
 endif
