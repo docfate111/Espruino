@@ -401,8 +401,7 @@ void fuzzilli(const char* str, char* print_str){
       fprintf(fzliout, "%s\n", print_str);
     }
     fflush(fzliout);
-  } else if {
-    if (!strcmp(str, "FUZZILLI_CRASH")) {
+  } else if (!strcmp(str, "FUZZILLI_CRASH")) {
       int type = atoi(str);
       switch (type) {
         case 0:
