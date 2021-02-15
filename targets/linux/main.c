@@ -415,7 +415,7 @@ void fuzzilli(const char* str, char* print_str){
           break;
       }
   } else {
-    printf("fuzzilli NO CMD\n");
+    *((int*)0x41414141) = 0x1337;
     return;
   }
 }
