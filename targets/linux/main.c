@@ -389,27 +389,6 @@ void __sanitizer_cov_trace_pc_guard(uint32_t *guard) {
 }
 
 #define REPRL_DWFD 103
-void fuzzilli(const char* str){
-  if (!str) {
-    printf("fuzzilli NO CMD\n");
-    return;
-  }
-}
-void fuzzilli(const char* str, int type){
-  if (!strcmp(str, "FUZZILLI_CRASH")) {
-    switch (type) {
-      case 0:
-        *((int*)0x41414141) = 0x1337;
-        break;
-      case 1:
-        assert(0);
-        break;
-      default:
-        assert(0);
-        break;
-    }
-  }
-}
 void fuzzilli(const char* str, char* print_str){
   if (!strcmp(str, "FUZZILLI_PRINT")){
     printf("js_fuzzilli PRINT %s\n", str);
@@ -420,9 +399,25 @@ void fuzzilli(const char* str, char* print_str){
     }
     if (print_str) {
       fprintf(fzliout, "%s\n", print_str);
-      JS_FreeCString(ctx, print_str);
     }
     fflush(fzliout);
+  } else if {
+    if (!strcmp(str, "FUZZILLI_CRASH")) {
+      int type = atoi(str);
+      switch (type) {
+        case 0:
+          *((int*)0x41414141) = 0x1337;
+          break;
+        case 1:
+          assert(0);
+          break;
+        default:
+          assert(0);
+          break;
+      }
+  } else {
+    printf("fuzzilli NO CMD\n");
+    return;
   }
 }
 
