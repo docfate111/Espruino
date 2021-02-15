@@ -396,22 +396,22 @@ void fuzzilli(const char* s){
       fprintf(stderr, "Fuzzer output channel not available, printing to stdout instead\n");
       fzliout = stdout;
     }
-    char* print_str = strchr(s, 'T')+2;
+    char* print_str = strchr(s, 'T')+1;
     if (print_str) {
       fprintf(fzliout, "%s\n", print_str);
     }
     fflush(fzliout);
   } else if (strstr(s, "FUZZILLI_CRASH")) {
-      if(strstr(s, "0")){
+      //if(strstr(s, "0")){
           *((int*)0x41414141) = 0x1337;
           return;
-      } else if(strstr(s, "1")){
-          assert(0);
-          return;
-      } else {
-          assert(0);
-          return;
-      }
+      // } else if(strstr(s, "1")){
+      //     assert(0);
+      //     return;
+      // } else {
+      //     assert(0);
+      //     return;
+      // }
   } else {
     return;
   }
